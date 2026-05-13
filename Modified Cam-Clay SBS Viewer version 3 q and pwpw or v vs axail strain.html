@@ -297,31 +297,52 @@ const NU_POISSON = 0.3;                     // Poisson's ratio for elastic respo
 const G_COEF = 3*(1-2*NU_POISSON)/(2*(1+NU_POISSON));  // so that G = G_COEF * v*p'/kappa
 function Gmod(v, p) { return G_COEF * v * p / state.kappa; }
 
+function byId(id) {
+  return document.getElementById(id);
+}
+
+function readNumericInput(id, fallback) {
+  const el = byId(id);
+  if (!el) return fallback;
+  let v = Number(el.value);
+  if (!Number.isFinite(v)) v = fallback;
+  const min = Number(el.min), max = Number(el.max);
+  if (Number.isFinite(min)) v = Math.max(min, v);
+  if (Number.isFinite(max)) v = Math.min(max, v);
+  el.value = String(v);
+  return v;
+}
+
 function readSliders() {
-  state.Gamma  = +document.getElementById("s_Gamma").value;
-  state.lambda = +document.getElementById("s_lambda").value;
-  state.kappa  = +document.getElementById("s_kappa").value;
-  state.M      = +document.getElementById("s_M").value;
+  state.Gamma  = readNumericInput("s_Gamma", defaults.Gamma);
+  state.lambda = readNumericInput("s_lambda", defaults.lambda);
+  state.kappa  = readNumericInput("s_kappa", defaults.kappa);
+  state.M      = readNumericInput("s_M", defaults.M);
   // enforce kappa < lambda
   if (state.kappa >= state.lambda) {
     state.kappa = +(state.lambda * 0.95).toFixed(3);
-    document.getElementById("s_kappa").value = state.kappa;
+    const kEl = byId("s_kappa");
+    if (kEl) kEl.value = String(state.kappa);
   }
-  document.getElementById("v_Gamma").textContent  = state.Gamma.toFixed(2);
-  document.getElementById("v_lambda").textContent = state.lambda.toFixed(3);
-  document.getElementById("v_kappa").textContent  = state.kappa.toFixed(3);
-  document.getElementById("v_M").textContent      = state.M.toFixed(2);
+  const vGamma = byId("v_Gamma"), vLambda = byId("v_lambda"), vKappa = byId("v_kappa"), vM = byId("v_M");
+  if (vGamma) vGamma.textContent = state.Gamma.toFixed(2);
+  if (vLambda) vLambda.textContent = state.lambda.toFixed(3);
+  if (vKappa) vKappa.textContent = state.kappa.toFixed(3);
+  if (vM) vM.textContent = state.M.toFixed(2);
 
-  sp.p0  = +document.getElementById("s_p0").value;
-  sp.OCR = +document.getElementById("s_OCR").value;
+  sp.p0  = readNumericInput("s_p0", spDefaults.p0);
+  sp.OCR = readNumericInput("s_OCR", spDefaults.OCR);
   const rad = document.querySelector('input[name="testType"]:checked');
   sp.testType = rad ? rad.value : "undrained";
-  sp.showTSP  = document.getElementById("sp_showTSP").checked;
-  document.getElementById("v_p0").textContent  = sp.p0.toFixed(0);
-  document.getElementById("v_OCR").textContent = sp.OCR.toFixed(1);
+  const tsp = byId("sp_showTSP");
+  sp.showTSP  = tsp ? tsp.checked : false;
+  const vp0 = byId("v_p0"), vOCR = byId("v_OCR");
+  if (vp0) vp0.textContent = sp.p0.toFixed(0);
+  if (vOCR) vOCR.textContent = sp.OCR.toFixed(1);
   // TSP checkbox only meaningful for undrained
-  document.getElementById("sp_tsp_wrap").style.opacity = (sp.testType === "undrained") ? 1 : 0.45;
-  document.getElementById("sp_showTSP").disabled = (sp.testType !== "undrained");
+  const tspWrap = byId("sp_tsp_wrap");
+  if (tspWrap) tspWrap.style.opacity = (sp.testType === "undrained") ? 1 : 0.45;
+  if (tsp) tsp.disabled = (sp.testType !== "undrained");
 }
 
 /* ======================================================================== */
@@ -1167,7 +1188,21 @@ function layoutXtra() {
 const config = { responsive: true, displaylogo: false,
   modeBarButtonsToRemove: ["sendDataToCloud", "autoScale2d", "select2d", "lasso2d"] };
 
+function plotIds() {
+  return ["plot3d", "plotPQ", "plotVP", "plotQEa", "plotXtra"];
+}
+
+function showStartupMessage(msg) {
+  plotIds().forEach(id => {
+    const el = byId(id);
+    if (el) {
+      el.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;padding:16px;color:#8b949e;text-align:center;">${msg}</div>`;
+    }
+  });
+}
+
 function initialDraw() {
+  if (!window.Plotly) return;
   Plotly.newPlot("plot3d",   build3DTraces(),   layout3D(),   config);
   Plotly.newPlot("plotPQ",   buildPQTraces(),   layoutPQ(),   config);
   Plotly.newPlot("plotVP",   buildVPTraces(),   layoutVP(),   config);
@@ -1177,6 +1212,7 @@ function initialDraw() {
 
 /* Use react() for fast, camera-preserving updates */
 function redraw() {
+  if (!window.Plotly) return;
   readSliders();
   Plotly.react("plot3d",   build3DTraces(),   layout3D(),   config);
   Plotly.react("plotPQ",   buildPQTraces(),   layoutPQ(),   config);
@@ -1193,36 +1229,86 @@ function scheduleRedraw() {
   rafId = requestAnimationFrame(() => { rafId = null; redraw(); });
 }
 
-["s_Gamma", "s_lambda", "s_kappa", "s_M", "s_p0", "s_OCR"].forEach(id => {
-  document.getElementById(id).addEventListener("input", () => { sp.visible = true; scheduleRedraw(); });
-});
+let handlersBound = false;
+const MAX_STARTUP_RETRIES = 60;
+const CORE_RETRY_DELAY_MS = 50;
+const PLOTLY_RETRY_DELAY_MS = 100;
+function bindHandlers() {
+  if (handlersBound) return;
+  handlersBound = true;
 
-document.querySelectorAll('input[name="testType"]').forEach(el => {
-  el.addEventListener("change", () => { sp.visible = true; scheduleRedraw(); });
-});
-document.getElementById("sp_showTSP").addEventListener("change", scheduleRedraw);
+  ["s_Gamma", "s_lambda", "s_kappa", "s_M", "s_p0", "s_OCR"].forEach(id => {
+    const el = byId(id);
+    if (el) el.addEventListener("input", () => { sp.visible = true; scheduleRedraw(); });
+  });
 
-document.getElementById("sp_clear").addEventListener("click", () => {
-  sp.visible = false;
-  redraw();
-});
+  document.querySelectorAll('input[name="testType"]').forEach(el => {
+    el.addEventListener("change", () => { sp.visible = true; scheduleRedraw(); });
+  });
 
-document.getElementById("reset").addEventListener("click", () => {
-  document.getElementById("s_Gamma").value  = defaults.Gamma;
-  document.getElementById("s_lambda").value = defaults.lambda;
-  document.getElementById("s_kappa").value  = defaults.kappa;
-  document.getElementById("s_M").value      = defaults.M;
-  document.getElementById("s_p0").value     = spDefaults.p0;
-  document.getElementById("s_OCR").value    = spDefaults.OCR;
-  document.querySelector('input[name="testType"][value="undrained"]').checked = true;
-  document.getElementById("sp_showTSP").checked = false;
-  sp.visible = true;
-  redraw();
-});
+  const showTsp = byId("sp_showTSP");
+  if (showTsp) showTsp.addEventListener("change", scheduleRedraw);
 
-initialDraw();
-readSliders();
-updateInfoBox();
+  const clearBtn = byId("sp_clear");
+  if (clearBtn) {
+    clearBtn.addEventListener("click", () => {
+      sp.visible = false;
+      redraw();
+    });
+  }
+
+  const resetBtn = byId("reset");
+  if (resetBtn) {
+    resetBtn.addEventListener("click", () => {
+      const sGamma = byId("s_Gamma"), sLambda = byId("s_lambda"), sKappa = byId("s_kappa"), sM = byId("s_M");
+      const sP0 = byId("s_p0"), sOCR = byId("s_OCR"), sShowTSP = byId("sp_showTSP");
+      if (sGamma) sGamma.value = String(defaults.Gamma);
+      if (sLambda) sLambda.value = String(defaults.lambda);
+      if (sKappa) sKappa.value = String(defaults.kappa);
+      if (sM) sM.value = String(defaults.M);
+      if (sP0) sP0.value = String(spDefaults.p0);
+      if (sOCR) sOCR.value = String(spDefaults.OCR);
+      const undrained = document.querySelector('input[name="testType"][value="undrained"]');
+      if (undrained) undrained.checked = true;
+      if (sShowTSP) sShowTSP.checked = false;
+      sp.visible = true;
+      redraw();
+    });
+  }
+}
+
+function coreReady() {
+  const required = ["s_Gamma", "s_lambda", "s_kappa", "s_M", "s_p0", "s_OCR", "sp_showTSP", "plot3d", "plotPQ", "plotVP", "plotQEa", "plotXtra"];
+  return required.every(id => !!byId(id));
+}
+
+let startupAttempts = 0;
+function startApp() {
+  startupAttempts += 1;
+  if (!coreReady()) {
+    if (startupAttempts < MAX_STARTUP_RETRIES) return setTimeout(startApp, CORE_RETRY_DELAY_MS);
+    showStartupMessage("Page controls did not initialize correctly. Reload the page and check for HTML/selector issues.");
+    return;
+  }
+
+  if (!window.Plotly) {
+    if (startupAttempts < MAX_STARTUP_RETRIES) return setTimeout(startApp, PLOTLY_RETRY_DELAY_MS);
+    showStartupMessage("Plotly failed to load from CDN. Check network/CSP and reload.");
+    return;
+  }
+
+  readSliders();
+  bindHandlers();
+  initialDraw();
+  updateInfoBox();
+  window.addEventListener("resize", scheduleRedraw);
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", startApp, { once: true });
+} else {
+  startApp();
+}
 </script>
 </body>
 </html>
