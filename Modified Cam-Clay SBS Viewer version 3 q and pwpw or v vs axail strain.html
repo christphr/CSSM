@@ -1230,6 +1230,9 @@ function scheduleRedraw() {
 }
 
 let handlersBound = false;
+const MAX_STARTUP_RETRIES = 60;
+const CORE_RETRY_DELAY_MS = 50;
+const PLOTLY_RETRY_DELAY_MS = 100;
 function bindHandlers() {
   if (handlersBound) return;
   handlersBound = true;
@@ -1283,12 +1286,13 @@ let startupAttempts = 0;
 function startApp() {
   startupAttempts += 1;
   if (!coreReady()) {
-    if (startupAttempts < 60) return setTimeout(startApp, 50);
+    if (startupAttempts < MAX_STARTUP_RETRIES) return setTimeout(startApp, CORE_RETRY_DELAY_MS);
+    showStartupMessage("Page controls did not initialize correctly. Reload the page and check for HTML/selector issues.");
     return;
   }
 
   if (!window.Plotly) {
-    if (startupAttempts < 60) return setTimeout(startApp, 100);
+    if (startupAttempts < MAX_STARTUP_RETRIES) return setTimeout(startApp, PLOTLY_RETRY_DELAY_MS);
     showStartupMessage("Plotly failed to load from CDN. Check network/CSP and reload.");
     return;
   }
