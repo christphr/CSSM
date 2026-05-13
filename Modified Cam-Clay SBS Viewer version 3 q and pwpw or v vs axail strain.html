@@ -1,0 +1,1555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Modified Cam-Clay · state boundary surface</title>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<script>
+// MathJax (small, only used in the intro box)
+window.MathJax = { tex: { inlineMath: [["\\(", "\\)"]] } };
+</script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+<style>
+  :root {
+    --bg:#0e1117; --panel:#161b22; --panel2:#1f2630;
+    --text:#e6edf3; --muted:#8b949e; --accent:#58a6ff;
+    --blue:#4c8bf5; --red:#e5534b; --gold:#d29922; --green:#3fb950;
+    --border:#30363d;
+  }
+  * { box-sizing:border-box; }
+  html,body { margin:0; padding:0; background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+    font-size:14px; line-height:1.45; }
+  header { padding:18px 24px; border-bottom:1px solid var(--border);
+    display:flex; align-items:baseline; justify-content:space-between; gap:20px; flex-wrap:wrap; }
+  header h1 { margin:0; font-size:18px; font-weight:600; letter-spacing:.2px; }
+  header .sub { color:var(--muted); font-size:12.5px; }
+
+  main { display:grid; grid-template-columns: 340px 1fr; gap:0; min-height:calc(100vh - 63px); }
+  aside { border-right:1px solid var(--border); padding:18px 20px; background:var(--panel);
+    overflow-y:auto; }
+  section.viz { padding:16px 18px; display:grid;
+    grid-template-columns: 1.25fr 1fr;
+    grid-template-rows: minmax(320px, 1fr) minmax(320px, 1fr) 380px;
+    gap:12px; min-height:calc(100vh - 63px); }
+  #plot3d   { grid-row: 1 / 3; grid-column: 1; background:var(--panel); border:1px solid var(--border); border-radius:8px; }
+  #plotPQ   { grid-row: 1;     grid-column: 2; background:var(--panel); border:1px solid var(--border); border-radius:8px; }
+  #plotVP   { grid-row: 2;     grid-column: 2; background:var(--panel); border:1px solid var(--border); border-radius:8px; }
+  #plotQEa  { grid-row: 3;     grid-column: 1; background:var(--panel); border:1px solid var(--border); border-radius:8px; }
+  #plotXtra { grid-row: 3;     grid-column: 2; background:var(--panel); border:1px solid var(--border); border-radius:8px; }
+
+  .slider-row { margin:14px 0; }
+  .slider-row .label {
+    display:flex; justify-content:space-between; align-items:baseline;
+    font-size:13px; margin-bottom:6px;
+  }
+  .slider-row .label .name { color:var(--text); }
+  .slider-row .label .val  { color:var(--accent); font-variant-numeric:tabular-nums; font-weight:600; }
+  .slider-row .hint { color:var(--muted); font-size:11.5px; margin-top:3px; }
+  input[type=range] {
+    width:100%; -webkit-appearance:none; appearance:none; background:transparent; height:22px;
+  }
+  input[type=range]::-webkit-slider-runnable-track {
+    height:4px; background:#30363d; border-radius:2px;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance:none; appearance:none; width:16px; height:16px; border-radius:50%;
+    background:var(--accent); margin-top:-6px; cursor:pointer; border:2px solid #0d1117;
+  }
+  input[type=range]::-moz-range-track { height:4px; background:#30363d; border-radius:2px; }
+  input[type=range]::-moz-range-thumb  { width:14px; height:14px; border-radius:50%; background:var(--accent); border:2px solid #0d1117; cursor:pointer; }
+
+  .intro {
+    background:var(--panel2); border:1px solid var(--border);
+    border-radius:8px; padding:12px 14px; font-size:12.5px; color:var(--muted);
+    margin-bottom:16px;
+  }
+  .intro code { color:var(--text); background:#0b0f14; padding:1px 5px; border-radius:3px; }
+  .eq { margin:2px 0; color:var(--text); }
+  .btn {
+    background:#21262d; border:1px solid var(--border); color:var(--text);
+    padding:6px 12px; border-radius:6px; font-size:12.5px; cursor:pointer;
+  }
+  .btn:hover { background:#30363d; }
+  .controls-header { display:flex; align-items:center; justify-content:space-between; }
+  .controls-header h2 { margin:0; font-size:14px; font-weight:600; color:var(--text); }
+
+  .legend {
+    display:flex; flex-wrap:wrap; gap:10px 16px; font-size:12px; color:var(--muted);
+    margin-top:6px;
+  }
+  .chip { display:inline-flex; align-items:center; gap:6px; }
+  .dot { width:10px; height:10px; border-radius:50%; display:inline-block; }
+
+  .section-hdr { margin:20px 0 10px 0; padding-top:16px; border-top:1px solid var(--border);
+    display:flex; align-items:center; justify-content:space-between; }
+  .section-hdr h2 { margin:0; font-size:14px; font-weight:600; color:var(--text); }
+  .radio-row { display:flex; gap:8px; margin:8px 0 6px 0; }
+  .radio-row label {
+    flex:1; text-align:center; padding:6px 4px; font-size:12.5px;
+    background:#0b0f14; border:1px solid var(--border); border-radius:6px;
+    cursor:pointer; color:var(--muted); user-select:none;
+  }
+  .radio-row input { display:none; }
+  .radio-row input:checked + span { color:var(--accent); font-weight:600; }
+  .radio-row label:has(input:checked) { border-color:var(--accent); background:#121a28; }
+  .check-row { margin:8px 0; display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--muted); cursor:pointer; }
+  .check-row input { accent-color: var(--accent); cursor:pointer; }
+  .info-box { background:#0b0f14; border:1px solid var(--border); border-radius:6px;
+    padding:8px 10px; font-size:11.5px; color:var(--muted); margin-top:10px;
+    font-variant-numeric:tabular-nums; line-height:1.55; }
+  .info-box .ib-row { display:flex; justify-content:space-between; gap:8px; }
+  .info-box .ib-val { color:var(--text); }
+  .badge { display:inline-block; padding:1px 7px; border-radius:10px; font-size:10.5px;
+    font-weight:600; letter-spacing:.2px; }
+  .badge.nc { background:#14351a; color:#7ee787; border:1px solid #238636; }
+  .badge.oc { background:#3a1d14; color:#ffa198; border:1px solid #9c3828; }
+  .btn-row { display:flex; gap:6px; margin-top:10px; }
+
+  footer { padding:10px 18px; color:var(--muted); font-size:12px; border-top:1px solid var(--border); }
+
+  @media (max-width: 1100px) {
+    main { grid-template-columns: 1fr; }
+    aside { border-right:none; border-bottom:1px solid var(--border); }
+    section.viz { grid-template-columns: 1fr; grid-template-rows: 520px 340px 340px 360px 360px; }
+    #plot3d   { grid-row:1; grid-column:1; }
+    #plotPQ   { grid-row:2; grid-column:1; }
+    #plotVP   { grid-row:3; grid-column:1; }
+    #plotQEa  { grid-row:4; grid-column:1; }
+    #plotXtra { grid-row:5; grid-column:1; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Modified Cam-Clay — state boundary surface</h1>
+    <div class="sub">Interactive \(p'\)-\(q\)-\(v\) viewer · drag the sliders to reshape NCL, CSL, URLs and the yield surface</div>
+  </div>
+  <div class="legend">
+    <span class="chip"><span class="dot" style="background:#4c8bf5"></span> NCL</span>
+    <span class="chip"><span class="dot" style="background:#e5534b"></span> CSL</span>
+    <span class="chip"><span class="dot" style="background:#d29922"></span> Example yield ellipses</span>
+    <span class="chip"><span class="dot" style="background:#8957e5"></span> State boundary surface</span>
+    <span class="chip"><span class="dot" style="background:#9ea7b3"></span> Elastic path</span>
+    <span class="chip"><span class="dot" style="background:#ff7b3a"></span> Plastic path</span>
+  </div>
+</header>
+
+<main>
+  <aside>
+    <div class="intro">
+      <div class="eq">NCL: \(v = \Gamma - \lambda\,\ln p'\)</div>
+      <div class="eq">CSL: \(v = \Gamma - (\lambda-\kappa)\ln 2 - \lambda \ln p'\), &nbsp;\(q = Mp'\)</div>
+      <div class="eq">URL: \(v = \Gamma - (\lambda-\kappa)\ln p_c - \kappa \ln p'\)</div>
+      <div class="eq">Yield locus: \(q^2 = M^2 p'(p_c - p')\)</div>
+    </div>
+
+    <div class="controls-header">
+      <h2>Parameters</h2>
+      <button class="btn" id="reset">Reset</button>
+    </div>
+
+    <div class="slider-row" data-key="Gamma">
+      <div class="label"><span class="name">Γ — NCL intercept at p' = 1</span><span class="val" id="v_Gamma">2.50</span></div>
+      <input type="range" min="1.5" max="4.0" step="0.01" value="2.50" id="s_Gamma">
+      <div class="hint">Shifts NCL and CSL vertically in \(v\)-\(\ln p'\).</div>
+    </div>
+
+    <div class="slider-row" data-key="lambda">
+      <div class="label"><span class="name">λ — NCL / CSL slope</span><span class="val" id="v_lambda">0.174</span></div>
+      <input type="range" min="0.05" max="0.40" step="0.001" value="0.174" id="s_lambda">
+      <div class="hint">Compressibility. Larger λ = more compressible (softer) clay.</div>
+    </div>
+
+    <div class="slider-row" data-key="kappa">
+      <div class="label"><span class="name">κ — swelling / URL slope</span><span class="val" id="v_kappa">0.035</span></div>
+      <input type="range" min="0.005" max="0.15" step="0.001" value="0.035" id="s_kappa">
+      <div class="hint">Elastic slope. Auto-clamped below λ.</div>
+    </div>
+
+    <div class="slider-row" data-key="M">
+      <div class="label"><span class="name">M — CSL slope in p'-q</span><span class="val" id="v_M">1.00</span></div>
+      <input type="range" min="0.50" max="1.80" step="0.01" value="1.00" id="s_M">
+      <div class="hint">Related to friction angle; \(M = 6\sin\phi'/(3-\sin\phi')\) (triaxial compression).</div>
+    </div>
+
+    <div class="intro" style="margin-top:18px;">
+      Example yield ellipses drawn at \(p_c = 50, 100, 200, 400\) kPa.
+      The SBS is generated by sweeping the yield locus along \(p_c\in[20,500]\) kPa
+      and attaching the URL through \((p'=p_c,\;v=\text{NCL}(p_c))\).
+    </div>
+
+    <div class="section-hdr">
+      <h2>Stress path</h2>
+      <button class="btn" id="sp_clear" title="Hide the stress path">Clear</button>
+    </div>
+
+    <div class="slider-row" data-key="p0">
+      <div class="label"><span class="name">p'₀ — initial mean effective stress</span><span class="val" id="v_p0">100</span></div>
+      <input type="range" min="5" max="400" step="1" value="100" id="s_p0">
+      <div class="hint">Starting point of the test on the URL.</div>
+    </div>
+
+    <div class="slider-row" data-key="OCR">
+      <div class="label"><span class="name">OCR — overconsolidation ratio \(p_c/p'_0\)</span><span class="val" id="v_OCR">1.0</span></div>
+      <input type="range" min="1.0" max="15.0" step="0.1" value="1.0" id="s_OCR">
+      <div class="hint">OCR = 1 is normally consolidated; OCR &gt; 1 is overconsolidated.</div>
+    </div>
+
+    <div class="radio-row" id="sp_test">
+      <label><input type="radio" name="testType" value="undrained" checked><span>Undrained (CIU)</span></label>
+      <label><input type="radio" name="testType" value="drained"><span>Drained (CID)</span></label>
+    </div>
+
+    <label class="check-row" id="sp_tsp_wrap">
+      <input type="checkbox" id="sp_showTSP">
+      <span>Show total stress path (TSP) and excess pore pressure</span>
+    </label>
+
+    <div class="info-box" id="sp_info">
+      <div class="ib-row"><span>State</span><span id="i_state" class="ib-val">—</span></div>
+      <div class="ib-row"><span>p_c (initial)</span><span id="i_pc" class="ib-val">—</span></div>
+      <div class="ib-row"><span>v₀</span><span id="i_v0" class="ib-val">—</span></div>
+      <div class="ib-row"><span>At failure (CSL)</span><span id="i_cs" class="ib-val">—</span></div>
+      <div class="ib-row" id="i_extra_row"><span id="i_extra_k">Δu at failure</span><span id="i_extra" class="ib-val">—</span></div>
+    </div>
+  </aside>
+
+  <section class="viz">
+    <div id="plot3d"></div>
+    <div id="plotPQ"></div>
+    <div id="plotVP"></div>
+    <div id="plotQEa"></div>
+    <div id="plotXtra"></div>
+  </section>
+</main>
+
+<footer>
+  Built for geotechnical intuition · MCC conventions of Roscoe &amp; Burland (1968). Rendered with Plotly.js.
+</footer>
+
+<script>
+/* ======================================================================== */
+/* Modified Cam-Clay math                                                   */
+/* ======================================================================== */
+const PC_EXAMPLES = [50, 100, 200, 400];
+const PC_MIN = 20, PC_MAX = 500;
+const N_PC = 60, N_THETA = 70;
+
+function linspace(a, b, n) {
+  const out = new Array(n);
+  const d = (b - a) / (n - 1);
+  for (let i = 0; i < n; i++) out[i] = a + i * d;
+  return out;
+}
+function ncl(p, G, lam)        { return G - lam * Math.log(p); }
+function cslV(p, G, lam, kap)  { return G - (lam - kap) * Math.log(2) - lam * Math.log(p); }
+function url(p, pc, G, lam, kap){ return G - (lam - kap) * Math.log(pc) - kap * Math.log(p); }
+
+function yieldEllipse(pc, M, n = 240) {
+  const p = new Array(n), q = new Array(n);
+  for (let i = 0; i < n; i++) {
+    const t = i / (n - 1);
+    p[i] = Math.max(1e-3, t * pc);
+    const arg = p[i] * (pc - p[i]);
+    q[i] = M * Math.sqrt(Math.max(0, arg));
+  }
+  return { p, q };
+}
+
+/* Build SBS patch: rows = pc (nPc), cols = theta (nTh) */
+function sbsPatch(G, lam, kap, M) {
+  const pcArr = linspace(PC_MIN, PC_MAX, N_PC);
+  const thArr = linspace(0, Math.PI, N_THETA);
+  const P = [], Q = [], V = [], C = [];
+  for (let i = 0; i < N_PC; i++) {
+    const pc = pcArr[i];
+    const rP = [], rQ = [], rV = [], rC = [];
+    for (let j = 0; j < N_THETA; j++) {
+      const th = thArr[j];
+      const p = Math.max(1e-3, 0.5 * pc * (1 - Math.cos(th)));
+      const q = M * Math.sqrt(Math.max(0, p * (pc - p)));
+      const v = G - (lam - kap) * Math.log(pc) - kap * Math.log(p);
+      rP.push(p); rQ.push(q); rV.push(v);
+      rC.push(Math.min(1, (q / p) / (2 * M)));   // colour by eta/(2M)
+    }
+    P.push(rP); Q.push(rQ); V.push(rV); C.push(rC);
+  }
+  return { P, Q, V, C };
+}
+
+/* ======================================================================== */
+/* State (sliders)                                                          */
+/* ======================================================================== */
+const state = { Gamma: 2.50, lambda: 0.174, kappa: 0.035, M: 1.00 };
+const defaults = { ...state };
+
+/* Stress path state */
+const sp = { p0: 100, OCR: 1.0, testType: "undrained", showTSP: false, visible: true };
+const spDefaults = { ...sp };
+
+/* Elastic constants for strain computation */
+const NU_POISSON = 0.3;                     // Poisson's ratio for elastic response
+const G_COEF = 3*(1-2*NU_POISSON)/(2*(1+NU_POISSON));  // so that G = G_COEF * v*p'/kappa
+function Gmod(v, p) { return G_COEF * v * p / state.kappa; }
+
+function readSliders() {
+  state.Gamma  = +document.getElementById("s_Gamma").value;
+  state.lambda = +document.getElementById("s_lambda").value;
+  state.kappa  = +document.getElementById("s_kappa").value;
+  state.M      = +document.getElementById("s_M").value;
+  // enforce kappa < lambda
+  if (state.kappa >= state.lambda) {
+    state.kappa = +(state.lambda * 0.95).toFixed(3);
+    document.getElementById("s_kappa").value = state.kappa;
+  }
+  document.getElementById("v_Gamma").textContent  = state.Gamma.toFixed(2);
+  document.getElementById("v_lambda").textContent = state.lambda.toFixed(3);
+  document.getElementById("v_kappa").textContent  = state.kappa.toFixed(3);
+  document.getElementById("v_M").textContent      = state.M.toFixed(2);
+
+  sp.p0  = +document.getElementById("s_p0").value;
+  sp.OCR = +document.getElementById("s_OCR").value;
+  const rad = document.querySelector('input[name="testType"]:checked');
+  sp.testType = rad ? rad.value : "undrained";
+  sp.showTSP  = document.getElementById("sp_showTSP").checked;
+  document.getElementById("v_p0").textContent  = sp.p0.toFixed(0);
+  document.getElementById("v_OCR").textContent = sp.OCR.toFixed(1);
+  // TSP checkbox only meaningful for undrained
+  document.getElementById("sp_tsp_wrap").style.opacity = (sp.testType === "undrained") ? 1 : 0.45;
+  document.getElementById("sp_showTSP").disabled = (sp.testType !== "undrained");
+}
+
+/* ======================================================================== */
+/* Stress path computation                                                  */
+/* ======================================================================== */
+/* Undrained (constant v): two phases.
+   Phase 1 (elastic): p' = p0, q from 0 to q_yield = M * sqrt(p0*(pc0-p0))
+                      [only valid if p0 <= pc0, i.e. OCR >= 1]
+   Phase 2 (elasto-plastic, consistency on URL with v = const = v0):
+     pc(p') = exp( (Gamma - v0 - kap*ln p') / (lam - kap) )
+     march p' from p0 -> p_cs = exp((Gamma_cs - v0)/lam),
+       Gamma_cs = Gamma - (lam-kap)*ln(2)
+*/
+function computeUndrained() {
+  const { Gamma: G, lambda: lam, kappa: kap, M } = state;
+  const p0 = sp.p0;
+  const pc0 = p0 * sp.OCR;
+  const v0 = G - (lam - kap) * Math.log(pc0) - kap * Math.log(p0);
+  const qYield = M * Math.sqrt(Math.max(0, p0 * (pc0 - p0)));
+
+  // Phase 1 (elastic vertical climb at p' = p0, v = v0, G constant)
+  const G0 = Gmod(v0, p0);
+  const NE = 40;
+  const elP = [], elQ = [], elV = [], elEa = [];
+  for (let i = 0; i < NE; i++) {
+    const t = i / (NE - 1);
+    const q = t * qYield;
+    elP.push(p0); elQ.push(q); elV.push(v0);
+    // undrained elastic: dEv = 0 so ea = eq = q/(3G0)
+    elEa.push(q / (3 * G0));
+  }
+  const eaYield = qYield / (3 * G0);
+
+  // Phase 2 (plastic): p' from p0 toward p_cs, v = v0
+  const Gcs = G - (lam - kap) * Math.log(2);
+  const pcs = Math.exp((Gcs - v0) / lam);
+  const wetSide = p0 > pc0 / 2; // on wet side, p' decreases toward p_cs
+  const NP = 200;
+  const plP = [], plQ = [], plV = [], plEa = [];
+  let prevP = null, prevQ = null, ea = eaYield;
+  for (let i = 0; i <= NP; i++) {
+    const t = i / NP;
+    const p = (1 - t) * p0 + t * pcs;
+    const pc = Math.exp((G - v0 - kap * Math.log(p)) / (lam - kap));
+    const arg = p * (pc - p);
+    if (arg < 0) continue;
+    const q = M * Math.sqrt(arg);
+    if (prevP !== null) {
+      const pm = 0.5 * (prevP + p);
+      const qm = 0.5 * (prevQ + q);
+      const dp = p - prevP;
+      const dq = q - prevQ;
+      const Gm = Gmod(v0, pm);
+      const dEqE = dq / (3 * Gm);
+      const dEvE = kap * dp / (v0 * pm);
+      const dEvP = -dEvE; // undrained: total dEv = 0
+      const pc_m = Math.exp((G - v0 - kap * Math.log(pm)) / (lam - kap));
+      const den = M * M * (2 * pm - pc_m);
+      const dEqP = Math.abs(den) > 1e-7 ? dEvP * 2 * qm / den : 0;
+      ea += dEqE + dEqP; // undrained: dEa = dEq (dEv = 0)
+    }
+    plP.push(p); plQ.push(q); plV.push(v0); plEa.push(ea);
+    prevP = p; prevQ = q;
+  }
+  const qcs = M * pcs;
+  const eaFinal = ea;
+
+  // Total stress path + excess pore pressure
+  const allP = elP.concat(plP), allQ = elQ.concat(plQ);
+  const tspP = allP.map((_, i) => p0 + allQ[i] / 3);
+  const uExcess = tspP.map((pt, i) => pt - allP[i]);
+  const uFinal = (p0 + qcs / 3) - pcs;
+  return {
+    pc0, v0, pcs, qcs, qYield, eaYield, eaFinal, wetSide,
+    elastic: { p: elP, q: elQ, v: elV, ea: elEa },
+    plastic: { p: plP, q: plQ, v: plV, ea: plEa },
+    tsp:    { p: tspP, q: allQ },
+    u: uExcess, uFinal
+  };
+}
+
+/* Drained (total stress path slope 3 = ESP here): q = 3(p' - p0)
+   Phase 1 (elastic): follow URL v = Gamma - (lam-kap)*ln(pc0) - kap*ln(p')
+                      from p' = p0 up to p_yield where the ESP meets the
+                      initial yield ellipse q^2 = M^2 p'(pc0 - p').
+     Solve (9 + M^2) p^2 - (18 p0 + M^2 pc0) p + 9 p0^2 = 0, take larger root.
+   Phase 2 (plastic): march along ESP with consistency on the yield surface:
+     dpc/dp' = (6 q - M^2 (pc - 2 p')) / (M^2 p')
+     dv/dp'  = -kap/p' - (lam-kap)/pc * dpc/dp'
+   Wet yield (p_yield > pc0/2): hardening, dp' > 0 toward CSL.
+   Dry yield (p_yield < pc0/2): peak at yield, then softening, dp' < 0 back toward CSL.
+*/
+function computeDrained() {
+  const { Gamma: G, lambda: lam, kappa: kap, M } = state;
+  const p0 = sp.p0;
+  const pc0 = p0 * sp.OCR;
+  const v0 = G - (lam - kap) * Math.log(pc0) - kap * Math.log(p0);
+  // Find yield intersection along q = 3(p - p0)
+  // q^2 = M^2 p (pc0 - p)  =>  9(p-p0)^2 = M^2 p(pc0 - p)
+  // (9 + M^2) p^2 - (18 p0 + M^2 pc0) p + 9 p0^2 = 0
+  const a = 9 + M * M;
+  const b = -(18 * p0 + M * M * pc0);
+  const c = 9 * p0 * p0;
+  const disc = b * b - 4 * a * c;
+  let reachesYield = disc >= 0;
+  let pYield = p0, qYield = 0, vYield = v0;
+  if (reachesYield) {
+    const sq = Math.sqrt(disc);
+    const r1 = (-b + sq) / (2 * a);
+    const r2 = (-b - sq) / (2 * a);
+    pYield = Math.max(r1, r2);
+    if (pYield < p0 - 1e-9) { // path starts inside, degrade
+      pYield = Math.max(r1, r2);
+    }
+    qYield = 3 * (pYield - p0);
+    vYield = G - (lam - kap) * Math.log(pc0) - kap * Math.log(pYield);
+  }
+  // Phase 1 elastic — along URL(pc0). Track axial strain simultaneously.
+  const NE = 60;
+  const elP = [], elQ = [], elV = [], elEa = [];
+  let eaAcc = 0;
+  let prevP_e = p0, prevQ_e = 0, prevV_e = v0;
+  for (let i = 0; i < NE; i++) {
+    const t = i / (NE - 1);
+    const p = p0 + t * (pYield - p0);
+    const q = 3 * (p - p0);
+    const v = G - (lam - kap) * Math.log(pc0) - kap * Math.log(p);
+    if (i > 0) {
+      const pm = 0.5 * (prevP_e + p);
+      const vm = 0.5 * (prevV_e + v);
+      const dp = p - prevP_e;
+      const dq = q - prevQ_e;
+      const Gm = Gmod(vm, pm);
+      const dEvE = kap * dp / (vm * pm);
+      const dEqE = dq / (3 * Gm);
+      eaAcc += dEvE / 3 + dEqE;
+    }
+    elP.push(p); elQ.push(q); elV.push(v); elEa.push(eaAcc);
+    prevP_e = p; prevQ_e = q; prevV_e = v;
+  }
+  const eaYield = eaAcc;
+
+  // Phase 2 plastic — RK2 integration in p', accumulating strain
+  const plP = [], plQ = [], plV = [], plEa = [];
+  let peak = null;
+  let peakEa = null;
+  if (reachesYield) {
+    const wetYield = pYield > pc0 / 2;
+    // Target p': both sides converge to p_cs where q_cs = M*p_cs = 3(p_cs - p0)
+    const pcs_target = 3 * p0 / (3 - M);
+    const NP = 400;
+    let p = pYield, q = qYield, v = vYield, pc = pc0;
+    let ea = eaYield;
+    plP.push(p); plQ.push(q); plV.push(v); plEa.push(ea);
+
+    const stepStrain = (dp, p, q, v, pc, pNew, qNew, vNew, pcNew) => {
+      // Mid-point quantities
+      const pm = 0.5 * (p + pNew), qm = 0.5 * (q + qNew), vm = 0.5 * (v + vNew), pcm = 0.5 * (pc + pcNew);
+      const Gm = Gmod(vm, pm);
+      const dEvE = kap * dp / (vm * pm);
+      // Plastic volumetric strain from hardening law: dpc/pc = v/(lam-kap) * dEvP
+      const dpc_step = pcNew - pc;
+      const dEvP = (lam - kap) * dpc_step / (vm * pcm);
+      const dEqE = 3 * dp / (3 * Gm); // dq = 3dp on ESP
+      const den = M * M * (2 * pm - pcm);
+      const dEqP = Math.abs(den) > 1e-7 ? dEvP * 2 * qm / den : 0;
+      const dEv = dEvE + dEvP;
+      const dEq = dEqE + dEqP;
+      return dEv / 3 + dEq; // dEa
+    };
+
+    if (wetYield || pcs_target > pYield) {
+      // Hardening toward CSL with dp' > 0 (wet side)
+      const dp = (pcs_target - pYield) / NP;
+      for (let i = 0; i < NP; i++) {
+        const f = (pp, qq, pcc) => {
+          const dpc = (6 * qq - M * M * (pcc - 2 * pp)) / (M * M * pp);
+          const dv  = -kap / pp - (lam - kap) / pcc * dpc;
+          return { dpc, dv };
+        };
+        const k1 = f(p, q, pc);
+        const p_mid = p + 0.5 * dp;
+        const q_mid = 3 * (p_mid - p0);
+        const pc_mid = pc + 0.5 * dp * k1.dpc;
+        const k2 = f(p_mid, q_mid, pc_mid);
+        const pNew  = p  + dp;
+        const pcNew = pc + dp * k2.dpc;
+        const vNew  = v  + dp * k2.dv;
+        const qNew  = 3 * (pNew - p0);
+        ea += stepStrain(dp, p, q, v, pc, pNew, qNew, vNew, pcNew);
+        p = pNew; q = qNew; v = vNew; pc = pcNew;
+        plP.push(p); plQ.push(q); plV.push(v); plEa.push(ea);
+      }
+    } else {
+      // Dry side: peak at yield, then softening with dp' < 0
+      peak = { p: pYield, q: qYield, v: vYield };
+      peakEa = eaYield;
+      const dp = (pcs_target - pYield) / NP; // negative
+      for (let i = 0; i < NP; i++) {
+        const f = (pp, qq, pcc) => {
+          const dpc = (6 * qq - M * M * (pcc - 2 * pp)) / (M * M * pp);
+          const dv  = -kap / pp - (lam - kap) / pcc * dpc;
+          return { dpc, dv };
+        };
+        const k1 = f(p, q, pc);
+        const p_mid = p + 0.5 * dp;
+        const q_mid = 3 * (p_mid - p0);
+        const pc_mid = pc + 0.5 * dp * k1.dpc;
+        const k2 = f(p_mid, q_mid, pc_mid);
+        const pNew  = p  + dp;
+        const pcNew = pc + dp * k2.dpc;
+        const vNew  = v  + dp * k2.dv;
+        const qNew  = Math.max(0, 3 * (pNew - p0));
+        const dEa = stepStrain(dp, p, q, v, pc, pNew, qNew, vNew, pcNew);
+        // For dry-side softening, axial strain is monotone increasing in a
+        // strain-controlled test; take |dEa| as the physical axial-strain increment.
+        ea += Math.abs(dEa);
+        p = pNew; q = qNew; v = vNew; pc = pcNew;
+        plP.push(p); plQ.push(q); plV.push(v); plEa.push(ea);
+      }
+    }
+  }
+  // CSL final point on this ESP
+  const pcs = 3 * p0 / (3 - M);
+  const qcs = M * pcs;
+  const vcs = G - (lam - kap) * Math.log(2) - lam * Math.log(pcs);
+  return {
+    pc0, v0, pcs, qcs, vcs, pYield, qYield, vYield, peak, peakEa, eaYield,
+    elastic: { p: elP, q: elQ, v: elV, ea: elEa },
+    plastic: { p: plP, q: plQ, v: plV, ea: plEa },
+    reachesYield
+  };
+}
+
+function computePath() {
+  if (!sp.visible) return null;
+  return sp.testType === "undrained" ? computeUndrained() : computeDrained();
+}
+
+/* ======================================================================== */
+/* Plot builders                                                            */
+/* ======================================================================== */
+const pLine = linspace(1, PC_MAX * 1.05, 220);
+
+function build3DTraces() {
+  const { Gamma: G, lambda: lam, kappa: kap, M } = state;
+  const { P, Q, V, C } = sbsPatch(G, lam, kap, M);
+
+  const surface = {
+    type: "surface",
+    x: P, y: Q, z: V, surfacecolor: C,
+    colorscale: "Viridis", showscale: false,
+    opacity: 0.82, name: "SBS",
+    contours: { z: { show: false } },
+    lighting: { ambient: 0.65, diffuse: 0.6, specular: 0.1, roughness: 0.9 },
+    hovertemplate: "p' = %{x:.1f}<br>q = %{y:.1f}<br>v = %{z:.3f}<extra>SBS</extra>",
+  };
+
+  const nclZ = pLine.map(p => ncl(p, G, lam));
+  const nclTrace = {
+    type: "scatter3d", mode: "lines",
+    x: pLine, y: new Array(pLine.length).fill(0), z: nclZ,
+    line: { color: "#4c8bf5", width: 6 },
+    name: "NCL", hovertemplate: "NCL<br>p' = %{x:.1f}<br>v = %{z:.3f}<extra></extra>",
+  };
+
+  const cslZ = pLine.map(p => cslV(p, G, lam, kap));
+  const cslY = pLine.map(p => M * p);
+  const cslTrace = {
+    type: "scatter3d", mode: "lines",
+    x: pLine, y: cslY, z: cslZ,
+    line: { color: "#e5534b", width: 6 },
+    name: "CSL", hovertemplate: "CSL<br>p' = %{x:.1f}<br>q = %{y:.1f}<br>v = %{z:.3f}<extra></extra>",
+  };
+
+  const ringTraces = PC_EXAMPLES.map((pc, i) => {
+    const e = yieldEllipse(pc, M);
+    const v = e.p.map(p => url(p, pc, G, lam, kap));
+    return {
+      type: "scatter3d", mode: "lines",
+      x: e.p, y: e.q, z: v,
+      line: { color: "#d29922", width: 4 },
+      name: i === 0 ? "Yield ellipses (pc = 50, 100, 200, 400 kPa)" : "",
+      showlegend: i === 0,
+      legendgroup: "rings",
+      hovertemplate: `p_c=${pc} kPa<br>p' = %{x:.1f}<br>q = %{y:.1f}<br>v = %{z:.3f}<extra></extra>`,
+    };
+  });
+
+  const pathTraces = buildPathTraces3D();
+  return [surface, nclTrace, cslTrace, ...ringTraces, ...pathTraces];
+}
+
+/* Stress path traces for the 3D view */
+function buildPathTraces3D() {
+  const path = computePath();
+  if (!path) return [];
+  const { M } = state;
+  const out = [];
+  if (path.elastic && path.elastic.p.length > 0) {
+    out.push({
+      type: "scatter3d", mode: "lines",
+      x: path.elastic.p, y: path.elastic.q, z: path.elastic.v,
+      line: { color: "#9ea7b3", width: 7, dash: "dash" },
+      name: "ESP elastic", legendgroup: "path",
+      hovertemplate: "elastic<br>p' = %{x:.1f}<br>q = %{y:.1f}<br>v = %{z:.3f}<extra></extra>",
+    });
+  }
+  if (path.plastic && path.plastic.p.length > 0) {
+    const isDry = (path.peak !== undefined && path.peak !== null) || (sp.testType === "undrained" && !path.wetSide);
+    out.push({
+      type: "scatter3d", mode: "lines",
+      x: path.plastic.p, y: path.plastic.q, z: path.plastic.v,
+      line: { color: isDry ? "#4aa3ff" : "#ff7b3a", width: 7 },
+      name: "ESP plastic", legendgroup: "path",
+      hovertemplate: "plastic<br>p' = %{x:.1f}<br>q = %{y:.1f}<br>v = %{z:.3f}<extra></extra>",
+    });
+  }
+  // Start marker (green)
+  out.push({
+    type: "scatter3d", mode: "markers",
+    x: [sp.p0], y: [0], z: [path.v0],
+    marker: { size: 5, color: "#3fb950", symbol: "circle" },
+    name: "start (p'₀, 0, v₀)", legendgroup: "path", showlegend: false,
+  });
+  // CSL endpoint (yellow star)
+  if (path.pcs) {
+    const vcs = (sp.testType === "undrained") ? path.v0 : path.vcs;
+    out.push({
+      type: "scatter3d", mode: "markers",
+      x: [path.pcs], y: [path.qcs], z: [vcs],
+      marker: { size: 5, color: "#e3b341", symbol: "diamond" },
+      name: "CSL endpoint", legendgroup: "path", showlegend: false,
+    });
+  }
+  // Peak for dry-drained
+  if (path.peak) {
+    out.push({
+      type: "scatter3d", mode: "markers",
+      x: [path.peak.p], y: [path.peak.q], z: [path.peak.v],
+      marker: { size: 5, color: "#e5534b", symbol: "x" },
+      name: "peak", legendgroup: "path", showlegend: false,
+    });
+  }
+  return out;
+}
+
+function buildPQTraces() {
+  const { M } = state;
+  const rings = PC_EXAMPLES.map(pc => {
+    const e = yieldEllipse(pc, M);
+    return {
+      type: "scatter", mode: "lines",
+      x: e.p, y: e.q,
+      name: "p_c = " + pc + " kPa",
+      line: { width: 2 },
+    };
+  });
+  const cslLine = {
+    type: "scatter", mode: "lines",
+    x: pLine, y: pLine.map(p => M * p),
+    name: "CSL (q = Mp')",
+    line: { color: "#e5534b", width: 2, dash: "dash" },
+  };
+  return [...rings, cslLine, ...buildPathTracesPQ()];
+}
+
+function buildPathTracesPQ() {
+  const path = computePath();
+  if (!path) return [];
+  const out = [];
+  const isDry = (path.peak !== undefined && path.peak !== null) || (sp.testType === "undrained" && !path.wetSide);
+  if (path.elastic && path.elastic.p.length > 0) {
+    out.push({
+      type: "scatter", mode: "lines",
+      x: path.elastic.p, y: path.elastic.q,
+      line: { color: "#9ea7b3", width: 2.5, dash: "dash" },
+      name: "ESP elastic", legendgroup: "path",
+    });
+  }
+  if (path.plastic && path.plastic.p.length > 0) {
+    out.push({
+      type: "scatter", mode: "lines",
+      x: path.plastic.p, y: path.plastic.q,
+      line: { color: isDry ? "#4aa3ff" : "#ff7b3a", width: 3 },
+      name: "ESP plastic", legendgroup: "path",
+    });
+  }
+  // TSP (undrained only)
+  if (sp.testType === "undrained" && sp.showTSP && path.tsp) {
+    out.push({
+      type: "scatter", mode: "lines",
+      x: path.tsp.p, y: path.tsp.q,
+      line: { color: "#e6edf3", width: 2, dash: "dot" },
+      name: "TSP", legendgroup: "path",
+    });
+  }
+  // Start marker
+  out.push({
+    type: "scatter", mode: "markers",
+    x: [sp.p0], y: [0],
+    marker: { size: 9, color: "#3fb950", line: { width: 1, color: "#0e1117" } },
+    name: "start", legendgroup: "path", showlegend: false,
+  });
+  // CSL endpoint
+  if (path.pcs) {
+    out.push({
+      type: "scatter", mode: "markers",
+      x: [path.pcs], y: [path.qcs],
+      marker: { size: 11, color: "#e3b341", symbol: "star", line: { width: 1, color: "#0e1117" } },
+      name: "CSL endpoint", legendgroup: "path", showlegend: false,
+    });
+  }
+  if (path.peak) {
+    out.push({
+      type: "scatter", mode: "markers",
+      x: [path.peak.p], y: [path.peak.q],
+      marker: { size: 10, color: "#e5534b", symbol: "x", line: { width: 2, color: "#e5534b" } },
+      name: "peak", legendgroup: "path", showlegend: false,
+    });
+  }
+  return out;
+}
+
+function buildVPTraces() {
+  const { Gamma: G, lambda: lam, kappa: kap } = state;
+  const nclT = {
+    type: "scatter", mode: "lines",
+    x: pLine, y: pLine.map(p => ncl(p, G, lam)),
+    name: "NCL", line: { color: "#4c8bf5", width: 2.5 },
+  };
+  const cslT = {
+    type: "scatter", mode: "lines",
+    x: pLine, y: pLine.map(p => cslV(p, G, lam, kap)),
+    name: "CSL", line: { color: "#e5534b", width: 2.5 },
+  };
+  const urlTraces = PC_EXAMPLES.map((pc, i) => {
+    const pp = linspace(1, pc, 120);
+    return {
+      type: "scatter", mode: "lines",
+      x: pp, y: pp.map(p => url(p, pc, G, lam, kap)),
+      name: "URL pc=" + pc, line: { color: "#d29922", width: 1.2, dash: "dot" },
+      showlegend: i === 0, legendgroup: "urls",
+    };
+  });
+  return [nclT, cslT, ...urlTraces, ...buildPathTracesVP()];
+}
+
+function buildPathTracesVP() {
+  const path = computePath();
+  if (!path) return [];
+  const out = [];
+  const isDry = (path.peak !== undefined && path.peak !== null) || (sp.testType === "undrained" && !path.wetSide);
+  if (path.elastic && path.elastic.p.length > 0) {
+    out.push({
+      type: "scatter", mode: "lines",
+      x: path.elastic.p, y: path.elastic.v,
+      line: { color: "#9ea7b3", width: 2.5, dash: "dash" },
+      name: "ESP elastic (v)", legendgroup: "path",
+    });
+  }
+  if (path.plastic && path.plastic.p.length > 0) {
+    out.push({
+      type: "scatter", mode: "lines",
+      x: path.plastic.p, y: path.plastic.v,
+      line: { color: isDry ? "#4aa3ff" : "#ff7b3a", width: 3 },
+      name: "ESP plastic (v)", legendgroup: "path",
+    });
+  }
+  // Start marker
+  out.push({
+    type: "scatter", mode: "markers",
+    x: [sp.p0], y: [path.v0],
+    marker: { size: 9, color: "#3fb950", line: { width: 1, color: "#0e1117" } },
+    name: "start", legendgroup: "path", showlegend: false,
+  });
+  // CSL endpoint
+  if (path.pcs) {
+    const vcs = (sp.testType === "undrained") ? path.v0 : path.vcs;
+    out.push({
+      type: "scatter", mode: "markers",
+      x: [path.pcs], y: [vcs],
+      marker: { size: 11, color: "#e3b341", symbol: "star", line: { width: 1, color: "#0e1117" } },
+      name: "CSL endpoint", legendgroup: "path", showlegend: false,
+    });
+  }
+  if (path.peak) {
+    out.push({
+      type: "scatter", mode: "markers",
+      x: [path.peak.p], y: [path.peak.v],
+      marker: { size: 10, color: "#e5534b", symbol: "x", line: { width: 2, color: "#e5534b" } },
+      name: "peak", legendgroup: "path", showlegend: false,
+    });
+  }
+  return out;
+}
+
+function updateInfoBox() {
+  const stateEl = document.getElementById("i_state");
+  const pcEl    = document.getElementById("i_pc");
+  const v0El    = document.getElementById("i_v0");
+  const csEl    = document.getElementById("i_cs");
+  const exEl    = document.getElementById("i_extra");
+  const exK     = document.getElementById("i_extra_k");
+  if (!sp.visible) {
+    stateEl.innerHTML = "—"; pcEl.textContent = "—"; v0El.textContent = "—";
+    csEl.textContent = "—"; exEl.textContent = "—"; exK.textContent = "Notes";
+    return;
+  }
+  const path = computePath();
+  const isNC = Math.abs(sp.OCR - 1) < 1e-3;
+  stateEl.innerHTML = isNC
+    ? `<span class="badge nc">NC</span> OCR = 1.00`
+    : `<span class="badge oc">OC</span> OCR = ${sp.OCR.toFixed(2)}`;
+  pcEl.textContent = `${path.pc0.toFixed(1)} kPa`;
+  v0El.textContent = path.v0.toFixed(3);
+  if (sp.testType === "undrained") {
+    csEl.textContent = `p' = ${path.pcs.toFixed(1)} kPa, q = ${path.qcs.toFixed(1)} kPa`;
+    exK.textContent = "Δu at failure";
+    exEl.textContent = `${path.uFinal.toFixed(1)} kPa` + (path.wetSide ? "  (contractive, +)" : "  (dilative, −)");
+  } else {
+    csEl.textContent = `p' = ${path.pcs.toFixed(1)} kPa, q = ${path.qcs.toFixed(1)} kPa, v = ${path.vcs.toFixed(3)}`;
+    if (path.peak) {
+      exK.textContent = "Peak (dry/OC)";
+      exEl.textContent = `q_peak = ${path.peak.q.toFixed(1)} kPa at p' = ${path.peak.p.toFixed(1)} kPa`;
+    } else {
+      exK.textContent = "Yielding";
+      exEl.textContent = path.reachesYield
+        ? `at p' = ${path.pYield.toFixed(1)} kPa (wet side, hardening)`
+        : "ESP does not reach yield surface";
+    }
+  }
+}
+
+/* ======================================================================== */
+/* Layouts                                                                  */
+/* ======================================================================== */
+const darkPaper = "#161b22", darkPlot = "#161b22", grid = "#30363d", tickc = "#c9d1d9";
+
+function layout3D() {
+  return {
+    paper_bgcolor: darkPaper, plot_bgcolor: darkPlot,
+    font: { color: tickc, size: 12 },
+    title: { text: "State boundary surface in p'–q–v", x: 0.04, y: 0.97, xanchor:"left" },
+    margin: { l: 0, r: 0, t: 40, b: 0 },
+    showlegend: true,
+    legend: { x: 0.04, y: 0.90, bgcolor: "rgba(22,27,34,0.6)", bordercolor: "#30363d", borderwidth:1 },
+    scene: {
+      domain: { x: [0.15, 0.98], y: [0.05, 0.98] },
+      xaxis: { title: "p'  [kPa]", gridcolor: grid, zerolinecolor: grid, color: tickc, backgroundcolor: darkPlot, showbackground: true },
+      yaxis: { title: "q  [kPa]",  gridcolor: grid, zerolinecolor: grid, color: tickc, backgroundcolor: darkPlot, showbackground: true },
+      zaxis: { title: "v = 1+e",    gridcolor: grid, zerolinecolor: grid, color: tickc, backgroundcolor: darkPlot, showbackground: true },
+      camera: { eye: { x: 1.5, y: -1.5, z: 0.85 } },
+      aspectmode: "cube",
+    },
+  };
+}
+
+function layoutPQ() {
+  return {
+    paper_bgcolor: darkPaper, plot_bgcolor: darkPlot,
+    font: { color: tickc, size: 12 },
+    title: { text: "Yield ellipses and CSL in p'–q", x: 0.02, y: 0.96, xanchor:"left", font:{size:13} },
+    margin: { l: 60, r: 20, t: 40, b: 52 },
+    xaxis: { title: { text: "p'  [kPa]", standoff: 6 }, gridcolor: grid, zerolinecolor: grid, color: tickc, range: [0, PC_MAX * 1.05] },
+    yaxis: { title: "q  [kPa]",  gridcolor: grid, zerolinecolor: grid, color: tickc, rangemode: "tozero" },
+    legend: { bgcolor: "rgba(0,0,0,0)", x: 1, y: 1, xanchor: "right", yanchor: "top", font:{size:11} },
+  };
+}
+
+function layoutVP() {
+  return {
+    paper_bgcolor: darkPaper, plot_bgcolor: darkPlot,
+    font: { color: tickc, size: 12 },
+    title: { text: "NCL, CSL and URLs in v–ln p'", x: 0.02, y: 0.96, xanchor:"left", font:{size:13} },
+    margin: { l: 60, r: 20, t: 40, b: 62 },
+    xaxis: {
+      title: { text: "p'  [kPa]   (log scale)", standoff: 10 },
+      type: "log", gridcolor: grid, color: tickc,
+      tickmode: "array",
+      tickvals: [1, 2, 5, 10, 20, 50, 100, 200, 500],
+      ticktext: ["1", "2", "5", "10", "20", "50", "100", "200", "500"],
+      range: [0, Math.log10(PC_MAX * 1.05)],
+    },
+    yaxis: { title: "v = 1+e", gridcolor: grid, color: tickc },
+    legend: { bgcolor: "rgba(0,0,0,0)", x: 1, y: 1, xanchor: "right", yanchor: "top", font:{size:11} },
+  };
+}
+
+/* ======================================================================== */
+/* Axial-strain – deviatoric-stress plot (q vs ε_a)                         */
+/* ======================================================================== */
+function buildQEaTraces() {
+  const path = computePath();
+  if (!path) return [];
+  const traces = [];
+  const isDry = (path.peak !== undefined && path.peak !== null) || (sp.testType === "undrained" && !path.wetSide);
+  // Elastic segment — gray dashed
+  if (path.elastic && path.elastic.ea && path.elastic.ea.length > 0) {
+    traces.push({
+      type: "scatter", mode: "lines",
+      x: path.elastic.ea.map(e => e * 100),  // percent
+      y: path.elastic.q,
+      line: { color: "#9ea7b3", width: 2.5, dash: "dash" },
+      name: "elastic",
+      hovertemplate: "εₐ = %{x:.3f}%<br>q = %{y:.1f} kPa<extra>elastic</extra>",
+    });
+  }
+  // Plastic segment — colored
+  if (path.plastic && path.plastic.ea && path.plastic.ea.length > 0) {
+    traces.push({
+      type: "scatter", mode: "lines",
+      x: path.plastic.ea.map(e => e * 100),
+      y: path.plastic.q,
+      line: { color: isDry ? "#4aa3ff" : "#ff7b3a", width: 3 },
+      name: "plastic",
+      hovertemplate: "εₐ = %{x:.3f}%<br>q = %{y:.1f} kPa<extra>plastic</extra>",
+    });
+  }
+  // Horizontal CSL reference line (q = q_cs) for context
+  if (path.pcs && path.qcs) {
+    const eaAll = [...(path.elastic?.ea || []), ...(path.plastic?.ea || [])];
+    const maxE = (eaAll.length ? Math.max(...eaAll) : 0.2) * 100;
+    traces.push({
+      type: "scatter", mode: "lines",
+      x: [0, Math.max(maxE * 1.05, 1)],
+      y: [path.qcs, path.qcs],
+      line: { color: "#e5534b", width: 1.2, dash: "dot" },
+      name: `q at CSL = ${path.qcs.toFixed(1)}`,
+      hoverinfo: "skip",
+    });
+  }
+  // Start marker
+  traces.push({
+    type: "scatter", mode: "markers",
+    x: [0], y: [0],
+    marker: { size: 9, color: "#3fb950", line: { width: 1, color: "#0e1117" } },
+    name: "start", showlegend: false,
+  });
+  // Failure (CSL) endpoint
+  const plEa = path.plastic?.ea;
+  if (plEa && plEa.length > 0) {
+    const eaEnd = plEa[plEa.length - 1] * 100;
+    traces.push({
+      type: "scatter", mode: "markers",
+      x: [eaEnd], y: [path.qcs],
+      marker: { size: 11, color: "#e3b341", symbol: "star", line: { width: 1, color: "#0e1117" } },
+      name: "CSL endpoint", showlegend: false,
+    });
+  }
+  // Peak for dry-drained
+  if (path.peak && path.peakEa !== null && path.peakEa !== undefined) {
+    traces.push({
+      type: "scatter", mode: "markers",
+      x: [path.peakEa * 100], y: [path.peak.q],
+      marker: { size: 10, color: "#e5534b", symbol: "x", line: { width: 2, color: "#e5534b" } },
+      name: "peak", showlegend: false,
+    });
+  }
+  return traces;
+}
+
+function layoutQEa() {
+  return {
+    paper_bgcolor: darkPaper, plot_bgcolor: darkPlot,
+    font: { color: tickc, size: 12 },
+    title: { text: "Deviatoric stress vs axial strain   q – εₐ", x: 0.02, y: 0.96, xanchor:"left", font:{size:13} },
+    margin: { l: 60, r: 20, t: 40, b: 52 },
+    xaxis: {
+      title: { text: "εₐ  [%]", standoff: 6 },
+      gridcolor: grid, zerolinecolor: grid, color: tickc, rangemode: "tozero",
+    },
+    yaxis: {
+      title: "q  [kPa]", gridcolor: grid, zerolinecolor: grid, color: tickc, rangemode: "tozero",
+    },
+    legend: { bgcolor: "rgba(0,0,0,0)", x: 1, y: 0, xanchor: "right", yanchor: "bottom", font:{size:11} },
+  };
+}
+
+/* ======================================================================== */
+/* Context panel: Δu vs εₐ (undrained) OR v vs εₐ (drained)                   */
+/* ======================================================================== */
+function buildXtraTraces() {
+  const path = computePath();
+  if (!path) return [];
+  const traces = [];
+  const isDry = (path.peak !== undefined && path.peak !== null) || (sp.testType === "undrained" && !path.wetSide);
+  const plColor = isDry ? "#4aa3ff" : "#ff7b3a";
+
+  if (sp.testType === "undrained") {
+    // Δu(εₐ)  with  Δu = (p'₀ + q/3) − p'
+    const elEa = (path.elastic?.ea || []).map(e => e * 100);
+    const elU  = (path.elastic?.p || []).map((p, i) => sp.p0 + path.elastic.q[i] / 3 - p);
+    const plEa = (path.plastic?.ea || []).map(e => e * 100);
+    const plU  = (path.plastic?.p || []).map((p, i) => sp.p0 + path.plastic.q[i] / 3 - p);
+    if (elEa.length) {
+      traces.push({
+        type: "scatter", mode: "lines",
+        x: elEa, y: elU,
+        line: { color: "#9ea7b3", width: 2.5, dash: "dash" },
+        name: "elastic",
+        hovertemplate: "εₐ = %{x:.3f}%<br>Δu = %{y:.1f} kPa<extra>elastic</extra>",
+      });
+    }
+    if (plEa.length) {
+      traces.push({
+        type: "scatter", mode: "lines",
+        x: plEa, y: plU,
+        line: { color: plColor, width: 3 },
+        name: "plastic",
+        hovertemplate: "εₐ = %{x:.3f}%<br>Δu = %{y:.1f} kPa<extra>plastic</extra>",
+      });
+    }
+    // Zero reference (Δu = 0) for visual cue on dry/dilative tests
+    const allE = [...elEa, ...plEa];
+    const maxE = allE.length ? Math.max(...allE) : 1;
+    traces.push({
+      type: "scatter", mode: "lines",
+      x: [0, Math.max(maxE * 1.05, 1)],
+      y: [0, 0],
+      line: { color: "#6e7681", width: 1, dash: "dot" },
+      name: "Δu = 0", hoverinfo: "skip", showlegend: false,
+    });
+    // Δu at failure reference
+    traces.push({
+      type: "scatter", mode: "lines",
+      x: [0, Math.max(maxE * 1.05, 1)],
+      y: [path.uFinal, path.uFinal],
+      line: { color: "#e5534b", width: 1.2, dash: "dot" },
+      name: `Δu at CSL = ${path.uFinal.toFixed(1)}`,
+      hoverinfo: "skip",
+    });
+    // start marker
+    traces.push({
+      type: "scatter", mode: "markers",
+      x: [0], y: [0],
+      marker: { size: 9, color: "#3fb950", line: { width: 1, color: "#0e1117" } },
+      name: "start", showlegend: false,
+    });
+    // CSL endpoint
+    if (plEa.length) {
+      traces.push({
+        type: "scatter", mode: "markers",
+        x: [plEa[plEa.length - 1]], y: [plU[plU.length - 1]],
+        marker: { size: 11, color: "#e3b341", symbol: "star", line: { width: 1, color: "#0e1117" } },
+        name: "CSL endpoint", showlegend: false,
+      });
+    }
+  } else {
+    // drained: v(εₐ)
+    const elEa = (path.elastic?.ea || []).map(e => e * 100);
+    const elV  = path.elastic?.v || [];
+    const plEa = (path.plastic?.ea || []).map(e => e * 100);
+    const plV  = path.plastic?.v || [];
+    if (elEa.length) {
+      traces.push({
+        type: "scatter", mode: "lines",
+        x: elEa, y: elV,
+        line: { color: "#9ea7b3", width: 2.5, dash: "dash" },
+        name: "elastic",
+        hovertemplate: "εₐ = %{x:.3f}%<br>v = %{y:.4f}<extra>elastic</extra>",
+      });
+    }
+    if (plEa.length) {
+      traces.push({
+        type: "scatter", mode: "lines",
+        x: plEa, y: plV,
+        line: { color: plColor, width: 3 },
+        name: "plastic",
+        hovertemplate: "εₐ = %{x:.3f}%<br>v = %{y:.4f}<extra>plastic</extra>",
+      });
+    }
+    // CSL v reference
+    const allE = [...elEa, ...plEa];
+    const maxE = allE.length ? Math.max(...allE) : 1;
+    if (path.vcs !== undefined) {
+      traces.push({
+        type: "scatter", mode: "lines",
+        x: [0, Math.max(maxE * 1.05, 1)],
+        y: [path.vcs, path.vcs],
+        line: { color: "#e5534b", width: 1.2, dash: "dot" },
+        name: `v at CSL = ${path.vcs.toFixed(3)}`,
+        hoverinfo: "skip",
+      });
+    }
+    // start marker
+    traces.push({
+      type: "scatter", mode: "markers",
+      x: [0], y: [path.v0],
+      marker: { size: 9, color: "#3fb950", line: { width: 1, color: "#0e1117" } },
+      name: "start", showlegend: false,
+    });
+    // CSL endpoint
+    if (plEa.length) {
+      traces.push({
+        type: "scatter", mode: "markers",
+        x: [plEa[plEa.length - 1]], y: [plV[plV.length - 1]],
+        marker: { size: 11, color: "#e3b341", symbol: "star", line: { width: 1, color: "#0e1117" } },
+        name: "CSL endpoint", showlegend: false,
+      });
+    }
+    // peak marker (dry drained)
+    if (path.peak && path.peakEa !== null && path.peakEa !== undefined) {
+      traces.push({
+        type: "scatter", mode: "markers",
+        x: [path.peakEa * 100], y: [path.peak.v],
+        marker: { size: 10, color: "#e5534b", symbol: "x", line: { width: 2, color: "#e5534b" } },
+        name: "peak", showlegend: false,
+      });
+    }
+  }
+  return traces;
+}
+
+function layoutXtra() {
+  const undrained = (sp.testType === "undrained");
+  return {
+    paper_bgcolor: darkPaper, plot_bgcolor: darkPlot,
+    font: { color: tickc, size: 12 },
+    title: {
+      text: undrained
+        ? "Excess pore pressure vs axial strain   Δu – εₐ"
+        : "Specific volume vs axial strain   v – εₐ",
+      x: 0.02, y: 0.96, xanchor: "left", font: { size: 13 },
+    },
+    margin: { l: 64, r: 20, t: 40, b: 52 },
+    xaxis: {
+      title: { text: "εₐ  [%]", standoff: 6 },
+      gridcolor: grid, zerolinecolor: grid, color: tickc, rangemode: "tozero",
+    },
+    yaxis: {
+      title: undrained ? "Δu  [kPa]" : "v = 1 + e",
+      gridcolor: grid, zerolinecolor: grid, color: tickc,
+      rangemode: undrained ? "normal" : "normal",
+    },
+    legend: { bgcolor: "rgba(0,0,0,0)", x: 1, y: 0, xanchor: "right", yanchor: "bottom", font: { size: 11 } },
+  };
+}
+
+/* ======================================================================== */
+/* Init + update                                                            */
+/* ======================================================================== */
+const config = { responsive: true, displaylogo: false,
+  modeBarButtonsToRemove: ["sendDataToCloud", "autoScale2d", "select2d", "lasso2d"] };
+
+function initialDraw() {
+  Plotly.newPlot("plot3d",   build3DTraces(),   layout3D(),   config);
+  Plotly.newPlot("plotPQ",   buildPQTraces(),   layoutPQ(),   config);
+  Plotly.newPlot("plotVP",   buildVPTraces(),   layoutVP(),   config);
+  Plotly.newPlot("plotQEa",  buildQEaTraces(),  layoutQEa(),  config);
+  Plotly.newPlot("plotXtra", buildXtraTraces(), layoutXtra(), config);
+}
+
+/* Use react() for fast, camera-preserving updates */
+function redraw() {
+  readSliders();
+  Plotly.react("plot3d",   build3DTraces(),   layout3D(),   config);
+  Plotly.react("plotPQ",   buildPQTraces(),   layoutPQ(),   config);
+  Plotly.react("plotVP",   buildVPTraces(),   layoutVP(),   config);
+  Plotly.react("plotQEa",  buildQEaTraces(),  layoutQEa(),  config);
+  Plotly.react("plotXtra", buildXtraTraces(), layoutXtra(), config);
+  updateInfoBox();
+}
+
+/* Debounce during drag so the 3D surface stays smooth */
+let rafId = null;
+function scheduleRedraw() {
+  if (rafId) cancelAnimationFrame(rafId);
+  rafId = requestAnimationFrame(() => { rafId = null; redraw(); });
+}
+
+["s_Gamma", "s_lambda", "s_kappa", "s_M", "s_p0", "s_OCR"].forEach(id => {
+  document.getElementById(id).addEventListener("input", () => { sp.visible = true; scheduleRedraw(); });
+});
+
+document.querySelectorAll('input[name="testType"]').forEach(el => {
+  el.addEventListener("change", () => { sp.visible = true; scheduleRedraw(); });
+});
+document.getElementById("sp_showTSP").addEventListener("change", scheduleRedraw);
+
+document.getElementById("sp_clear").addEventListener("click", () => {
+  sp.visible = false;
+  redraw();
+});
+
+document.getElementById("reset").addEventListener("click", () => {
+  document.getElementById("s_Gamma").value  = defaults.Gamma;
+  document.getElementById("s_lambda").value = defaults.lambda;
+  document.getElementById("s_kappa").value  = defaults.kappa;
+  document.getElementById("s_M").value      = defaults.M;
+  document.getElementById("s_p0").value     = spDefaults.p0;
+  document.getElementById("s_OCR").value    = spDefaults.OCR;
+  document.querySelector('input[name="testType"][value="undrained"]').checked = true;
+  document.getElementById("sp_showTSP").checked = false;
+  sp.visible = true;
+  redraw();
+});
+
+initialDraw();
+readSliders();
+updateInfoBox();
+</script>
+<script data-pplx-inline-edit>
+(function () {
+  if (window === window.top) return;
+
+  const allowedParentOrigins = ["https://www.perplexity.ai","https://perplexity.ai","https://testing.perplexity.ai","https://staging.perplexity.ai","https://*.preview.i.perplexity.ai","http://localhost:3000","http://127.0.0.1:3000","http://localhost:5173","http://127.0.0.1:5173"];
+  const MAX_FONT_BYTES = 500 * 1024;
+  const MAX_TOTAL_FONT_BYTES = 2 * 1024 * 1024;
+  let scrollForwarding = false;
+  let scrollRaf = 0;
+  let trustedTopOrigin = null;
+
+  // Allow entries like "https://*.preview.i.perplexity.ai" — the wildcard
+  // matches a single DNS label (no dots), so "https://*.foo" cannot stretch
+  // across multiple labels.
+  function matchesAllowedOrigin(origin) {
+    if (!origin) return false;
+    for (const entry of allowedParentOrigins) {
+      if (!entry.includes("*")) {
+        if (entry === origin) return true;
+        continue;
+      }
+      const pattern = new RegExp(
+        "^" +
+          entry.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, "[^.]+") +
+          "$",
+      );
+      if (pattern.test(origin)) return true;
+    }
+    return false;
+  }
+
+  // Trust decision: when the sender is same-origin-visible (event.origin is a
+  // real origin like https://www.perplexity.ai) we trust event.origin directly.
+  // When event.origin is "null" (opaque broker srcdoc), we fall back to the
+  // broker's stamped `parentOrigin` to identify the top window. The fallback
+  // is claim-only — we rely on the browser's native `targetOrigin` enforcement
+  // on the response path (see postToTrustedTop) to ensure replies can't be
+  // delivered to anyone but the actual top window of that claimed origin.
+  function getTrustedParentOrigin(event) {
+    const forwardedParentOrigin =
+      typeof event.data.parentOrigin === "string" ? event.data.parentOrigin : null;
+    const parentOrigin = event.origin === "null" ? forwardedParentOrigin : event.origin;
+    return matchesAllowedOrigin(parentOrigin) ? parentOrigin : null;
+  }
+
+  // All responses go to window.top with targetOrigin = the allowlisted origin.
+  // An attacker that iframes us inside their own null-origin broker can claim
+  // any parentOrigin they like, but the browser will drop the reply whenever
+  // the real top's origin doesn't match — so the screenshot never leaves.
+  function postToTrustedTop(message) {
+    if (!trustedTopOrigin) return;
+    try {
+      window.top.postMessage(message, trustedTopOrigin);
+    } catch (_error) {}
+  }
+
+  function inlineAll(original, clone) {
+    if (original.nodeType !== 1 || clone.nodeType !== 1) return;
+
+    try {
+      const computedStyle = getComputedStyle(original);
+      // cssText on a computed style is the serialized declaration in modern
+      // Chromium/Safari — a single read beats enumerating ~400 longhand
+      // properties. Firefox returns "" here, so we fall back on empty.
+      const serialized = computedStyle.cssText;
+      if (serialized) {
+        clone.style.cssText = serialized;
+      } else {
+        const parts = new Array(computedStyle.length);
+        for (let index = 0; index < computedStyle.length; index += 1) {
+          const property = computedStyle[index];
+          parts[index] = `${property}:${computedStyle.getPropertyValue(property)};`;
+        }
+        clone.style.cssText = parts.join("");
+      }
+    } catch (_error) {}
+
+    const originalChildren = original.children;
+    const clonedChildren = clone.children;
+    for (
+      let index = 0;
+      index < originalChildren.length && index < clonedChildren.length;
+      index += 1
+    ) {
+      inlineAll(originalChildren[index], clonedChildren[index]);
+    }
+  }
+
+  function extractFontUrl(srcValue) {
+    const matches = [
+      ...srcValue.matchAll(
+        /url\(["']?([^"')]+)["']?\)(?:\s*format\(["']?([^"')]+)["']?\))?/gi,
+      ),
+    ];
+    if (matches.length === 0) return null;
+    const woff2 = matches.find((m) => m[2] && m[2].toLowerCase().includes("woff2"));
+    if (woff2) return woff2[1];
+    const woff = matches.find((m) => m[2] && m[2].toLowerCase().includes("woff"));
+    if (woff) return woff[1];
+    return matches[0][1];
+  }
+
+  // Cache resolved font URL -> data URI across captures. Fonts on a page
+  // essentially never change, and a batch run emits multiple captures back to
+  // back — without this we'd refetch + re-base64 every time.
+  const fontDataUriCache = new Map();
+  const SRC_DECLARATION_RE = /src\s*:\s*[^;}]+/i;
+
+  async function fetchAsDataUri(url) {
+    if (fontDataUriCache.has(url)) return fontDataUriCache.get(url);
+    let dataUri = null;
+    try {
+      const response = await fetch(url, { mode: "cors", credentials: "omit" });
+      if (response.ok) {
+        const blob = await response.blob();
+        if (blob.size <= MAX_FONT_BYTES) {
+          dataUri = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () =>
+              resolve(typeof reader.result === "string" ? reader.result : null);
+            reader.onerror = () => resolve(null);
+            reader.readAsDataURL(blob);
+          });
+        }
+      }
+    } catch (_error) {
+      dataUri = null;
+    }
+    fontDataUriCache.set(url, dataUri);
+    return dataUri;
+  }
+
+  function collectFontFaceRuleTexts() {
+    const rules = [];
+    for (const sheet of document.styleSheets) {
+      let cssRules;
+      try {
+        cssRules = sheet.cssRules;
+      } catch (_error) {
+        continue;
+      }
+      if (!cssRules) continue;
+      for (const rule of cssRules) {
+        const cssText = rule.cssText || "";
+        if (cssText.startsWith("@font-face")) rules.push(cssText);
+      }
+    }
+    return rules;
+  }
+
+  async function buildInlinedFontCss() {
+    const ruleTexts = collectFontFaceRuleTexts();
+    if (ruleTexts.length === 0) return null;
+
+    const resolved = ruleTexts.map((cssText) => {
+      if (!SRC_DECLARATION_RE.test(cssText)) return null;
+      const srcMatch = cssText.match(/src\s*:\s*([^;}]+)[;}]/i);
+      if (!srcMatch) return null;
+      const url = extractFontUrl(srcMatch[1]);
+      if (!url) return null;
+      try {
+        return { cssText, url: new URL(url, document.baseURI).href };
+      } catch (_error) {
+        return null;
+      }
+    });
+
+    const dataUris = await Promise.all(
+      resolved.map((entry) => (entry ? fetchAsDataUri(entry.url) : Promise.resolve(null))),
+    );
+
+    const inlined = [];
+    let totalBytes = 0;
+    for (let index = 0; index < resolved.length; index += 1) {
+      const entry = resolved[index];
+      const dataUri = dataUris[index];
+      if (!entry || !dataUri) continue;
+      const approxBytes = dataUri.length * 0.75;
+      if (totalBytes + approxBytes > MAX_TOTAL_FONT_BYTES) break;
+      totalBytes += approxBytes;
+      inlined.push(entry.cssText.replace(SRC_DECLARATION_RE, `src: url("${dataUri}")`));
+    }
+    return inlined.length > 0 ? inlined.join("\n") : null;
+  }
+
+  function stripExternal(clone) {
+    const images = clone.querySelectorAll("img");
+    for (let index = 0; index < images.length; index += 1) {
+      const src = images[index].getAttribute("src");
+      if (src && !src.startsWith("data:")) images[index].removeAttribute("src");
+    }
+
+    const elements = clone.querySelectorAll("*");
+    for (let index = 0; index < elements.length; index += 1) {
+      const style = elements[index].style.cssText;
+      if (style && style.includes("url(")) {
+        elements[index].style.cssText = style.replace(
+          /url\(["']?(?!data:)[^)"']*["']?\)/gi,
+          "none",
+        );
+      }
+    }
+  }
+
+  function emitScroll() {
+    scrollRaf = 0;
+    if (!scrollForwarding) return;
+    postToTrustedTop({
+      type: "INLINE_EDIT_SCROLL",
+      scrollX: window.scrollX,
+      scrollY: window.scrollY,
+    });
+  }
+
+  window.addEventListener(
+    "scroll",
+    function () {
+      if (!scrollForwarding || scrollRaf) return;
+      scrollRaf = requestAnimationFrame(emitScroll);
+    },
+    { passive: true, capture: true },
+  );
+
+  async function handleCaptureRequest(event) {
+    const requestId = event.data.requestId;
+    const scrollX = window.scrollX;
+    const scrollY = window.scrollY;
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+
+    function postResult(dataUrl) {
+      postToTrustedTop({
+        type: "INLINE_EDIT_SCREENSHOT_RESULT",
+        requestId,
+        dataUrl,
+        scrollX,
+        scrollY,
+      });
+    }
+
+    try {
+      // Wait for any pending web fonts to resolve so both inline metrics and
+      // the @font-face inlining below see the same loaded faces.
+      if (document.fonts && document.fonts.ready) {
+        try {
+          await document.fonts.ready;
+        } catch (_error) {}
+      }
+
+      const clone = document.documentElement.cloneNode(true);
+      inlineAll(document.documentElement, clone);
+
+      const removedNodes = clone.querySelectorAll("script,link[rel=\"stylesheet\"],style");
+      for (let index = 0; index < removedNodes.length; index += 1) {
+        removedNodes[index].remove();
+      }
+
+      stripExternal(clone);
+
+      // Re-embed web fonts as data-URI @font-face rules so the SVG rasterizer
+      // can resolve them — external font URLs aren't fetched during
+      // foreignObject rendering, which would otherwise force a fallback face
+      // and change text metrics.
+      const inlinedFontCss = await buildInlinedFontCss();
+      if (inlinedFontCss) {
+        const styleEl = document.createElement("style");
+        styleEl.textContent = inlinedFontCss;
+        const head = clone.querySelector("head");
+        if (head) head.appendChild(styleEl);
+        else clone.insertBefore(styleEl, clone.firstChild);
+      }
+
+      const html = new XMLSerializer().serializeToString(clone);
+      const svg =
+        `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">` +
+        '<foreignObject width="100%" height="100%">' +
+        `<div xmlns="http://www.w3.org/1999/xhtml" style="width:${width}px;height:${height}px;overflow:hidden">` +
+        `<div style="transform:translate(-${scrollX}px,-${scrollY}px);transform-origin:top left">` +
+        html +
+        "</div></div></foreignObject></svg>";
+      const svgUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+      const image = new Image();
+      image.onload = function () {
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext("2d").drawImage(image, 0, 0);
+        postResult(canvas.toDataURL("image/png"));
+      };
+      image.onerror = function () {
+        postResult(null);
+      };
+      image.src = svgUrl;
+    } catch (_error) {
+      postResult(null);
+    }
+  }
+
+  window.addEventListener("message", function (event) {
+    if (!event.data) return;
+    // Only accept messages from the direct parent frame. Blocks sibling /
+    // unrelated-window postMessage senders that could otherwise reach us.
+    if (event.source !== window.parent) return;
+
+    const trustedParentOrigin = getTrustedParentOrigin(event);
+    if (!trustedParentOrigin) return;
+    trustedTopOrigin = trustedParentOrigin;
+
+    if (event.data.type === "INLINE_EDIT_SCROLL_START") {
+      scrollForwarding = true;
+      emitScroll();
+      return;
+    }
+
+    if (event.data.type === "INLINE_EDIT_SCROLL_STOP") {
+      scrollForwarding = false;
+      if (scrollRaf) cancelAnimationFrame(scrollRaf);
+      scrollRaf = 0;
+      return;
+    }
+
+    if (event.data.type !== "INLINE_EDIT_CAPTURE_REQUEST") return;
+
+    handleCaptureRequest(event);
+  });
+})();
+
+</script></body>
+</html>
